@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "bencode.h"
+#include "torrent_file.h"
 
 using namespace std;
 
@@ -12,17 +12,14 @@ int main(int argc, char* argv[]){
     if(string(argv[1])!="download"){
         cout<<"Invalid command\nUsage:"<<argv[0]<<" download <torrent file> -o <downlod dir>(optional)\n";
     }
-    ifstream file(argv[2],ios::binary);
 
-    stringstream buffer;
-    buffer<<file.rdbuf();
+    TorrentFile t;
+    string file=argv[2];
+    cout<<file<<"\n";
+    t.parse(file);
 
-    string data=buffer.str();
+    cout<<t.announce;
 
-    BencodeDecoder decoder(data);
-    BencodeVal val=decoder.decoder();
-
-    val.print_bencode();
 
     return 0;
 }

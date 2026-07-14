@@ -3,7 +3,6 @@
 
 
 BencodeVal BencodeDecoder::decoder(){
-    cout<<data[pos]<<endl;
     if(data[pos]=='d'){
         return decode_dict();
     }
