@@ -25,7 +25,7 @@ int main(int argc, char* argv[]){
     vector<Peer> peers= track.query(t);
 
 
-    cout<<peers.size();
+    // cout<<peers.size();
     for(auto i:peers){
         cout<<i.ip<<" : "<<i.port<<"\n";
     }
