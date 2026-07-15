@@ -7,7 +7,7 @@
 
 
 
-TorrentFile TorrentFile::parse(string & s){
+void TorrentFile::parse(string & s){
 
     ifstream file(s,ios::binary);
 
@@ -36,10 +36,11 @@ TorrentFile TorrentFile::parse(string & s){
         pieces_hash.push_back(piece.substr(i,20));
     }
 
-    // BencodeEncoder encoder(get<map<string, BencodeVal>>(val.value)["info"]);
-    string info_ben;
+    BencodeEncoder encode;
+    
 
-    // info_hash=sha1_hash(info_ben);
-    return *this;
+    string info_ben=encode.encoder((get<map<string, BencodeVal>>(val.value).at("info")));
+
+    info_hash=sha1_hash(info_ben);
 
 }
