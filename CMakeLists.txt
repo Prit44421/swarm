@@ -9,6 +9,8 @@ add_executable(swarm
     src/bencode.cpp
     src/torrent_file.cpp
     src/tracker.cpp
+    src/message.cpp
+    src/peer.cpp
 )
 
 target_link_libraries(swarm PRIVATE CURL::libcurl OpenSSL::SSL OpenSSL::Crypto)

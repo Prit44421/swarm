@@ -44,3 +44,7 @@ void TorrentFile::parse(string & s){
     info_hash=sha1_hash(info_ben);
 
 }
+
+int TorrentFile::num_pieces(){
+    return pieces.size()/piece_length;
+}

@@ -20,7 +20,7 @@ struct PeerMessage {
     MessageType type;
     vector<uint8_t> payload;
 
-    vector<uint8_t> make_handshake(string& info_hash, string& peer_id);
+    vector<uint8_t> static make_handshake(string& info_hash, string& peer_id);
 
     PeerMessage make_interested();
 

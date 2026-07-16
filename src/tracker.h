@@ -14,8 +14,8 @@ class Tracker{
 public:
     vector<Peer> query(TorrentFile& t);
 
-private:
+
     string url_encode(string& s);
 
-    string peer_id();
+    static string peer_id();
 };
