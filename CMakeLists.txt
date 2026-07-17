@@ -12,6 +12,7 @@ add_executable(swarm
     src/tracker.cpp
     src/message.cpp
     src/peer.cpp
+    src/piece_manager.cpp
 )
 
 target_link_libraries(swarm PRIVATE CURL::libcurl OpenSSL::SSL OpenSSL::Crypto)
