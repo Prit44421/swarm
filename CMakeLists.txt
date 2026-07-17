@@ -7,6 +7,7 @@ find_package(OpenSSL REQUIRED)
 add_executable(swarm 
     src/main.cpp
     src/bencode.cpp
+    src/sha1.cpp
     src/torrent_file.cpp
     src/tracker.cpp
     src/message.cpp

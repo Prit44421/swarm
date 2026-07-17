@@ -42,5 +42,6 @@ public:
     bool recv_all(void* buff, size_t len);
     bool has_piece(int idx);
 
-
+    bool download_piece(uint32_t index, int length, vector<uint8_t>& data, string& expected_hash);
+    bool is_unchoked();
 };

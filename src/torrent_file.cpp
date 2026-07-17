@@ -42,9 +42,19 @@ void TorrentFile::parse(string & s){
     string info_ben=encode.encoder((get<map<string, BencodeVal>>(val.value).at("info")));
 
     info_hash=sha1_hash(info_ben);
-
+    pieces=pieces_hash;
 }
 
 int TorrentFile::num_pieces(){
-    return pieces.size()/piece_length;
+    return static_cast<int>(pieces.size());
+}
+
+int TorrentFile::get_piece_length(int idx){
+    if(idx<0 || idx>=num_pieces()){
+        return -1;
+    }
+    if(idx==num_pieces()-1){
+        return length-(piece_length*(num_pieces()-1));
+    }
+    return piece_length;
 }

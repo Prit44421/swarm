@@ -44,7 +44,21 @@ int main(int argc, char* argv[]){
             cout<<"Handshake successful\n";
             vector<bool> bitfield;
             conn.recv_bitfield(bitfield);
-            cout<<"Bitfield received\n";
+            cout<<"Bitfield received\n Size: "<<bitfield.size()<<"\n";
+
+            vector<uint8_t> piece_data;
+            int req_pie=0;
+            for(int i=0;i<bitfield.size();i++){
+                if(bitfield[i]){
+                    cout<<"Peer has piece "<<i<<"\n";
+                    req_pie=i;
+                    break;
+                }
+            }
+            bool success=conn.download_piece(req_pie, t.get_piece_length(req_pie), piece_data, t.pieces[req_pie]);
+            if(success){
+                cout<<"Piece downloaded successfully\n";
+            }
         }
 
     }

@@ -22,9 +22,9 @@ struct PeerMessage {
 
     vector<uint8_t> static make_handshake(string& info_hash, string& peer_id);
 
-    PeerMessage make_interested();
+    PeerMessage static make_interested();
 
-    PeerMessage make_request(uint32_t index, uint32_t offset, uint32_t length);
+    PeerMessage static make_request(uint32_t index, uint32_t offset, uint32_t length);
 
     vector<uint8_t> serialize();
 };

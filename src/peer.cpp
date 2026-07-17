@@ -1,9 +1,10 @@
+#pragma once
 #include <arpa/inet.h>
 #include <cstring>
-
+#include <iostream>
 
 #include "peer.h"
-
+#include "sha1.h"
 
 bool PeerConnection::connect(){
     sockfd=socket(AF_INET,SOCK_STREAM,0);
@@ -90,39 +91,151 @@ bool PeerConnection::recv_all(void* buff, size_t len){
 
 
 optional<PeerMessage> PeerConnection::recv_msg(){
-    uint32_t l=0;
+    while(true){
+        uint32_t l=0;
 
-    if(!recv_all(&l, 4)){
-        return {};
+        if(!recv_all(&l, 4)){
+            return {};
+        }
+        l=ntohl(l);
+
+        if(l==0) continue;
+
+        uint8_t id=0;
+        if(!recv_all(&id, 1)) return {};
+
+        vector<uint8_t> payload;
+
+        if(l>1){
+            payload.resize(l-1);
+            if(!recv_all(payload.data(), l-1)) return {};
+        }
+        return PeerMessage{static_cast<MessageType>(id), payload};
     }
-    l=ntohl(l);
-
-    if(l==0) return {};
-
-    uint8_t id=0;
-    if(!recv_all(&id, 1)) return {};
-
-    vector<uint8_t> payload;
-
-    if(l>1){
-        payload.resize(l-1);
-        if(!recv_all(payload.data(), l-1)) return {};
-    }
-    return PeerMessage{static_cast<MessageType>(id), payload};
 }
 
 void PeerConnection::recv_bitfield(vector<bool>& bitfield){
-    auto msg=recv_msg();
-    if(msg->type!=MessageType::BITFIELD){
-        return;
+    bitfield.resize(pieces.size(), false);
+
+    while (true) {
+        auto msg = recv_msg();
+        if(!msg) break; 
+        cout<<"Received message of type "<<static_cast<int>(msg->type)<<"\n"; if(msg->type == MessageType::HAVE) cout<<"HAVE piece "<<ntohl(*reinterpret_cast<uint32_t*>(msg->payload.data()))<<"\n";
+        if(msg->type == MessageType::BITFIELD){
+            for(int i = 0; i < msg->payload.size(); i++){
+                uint8_t b = msg->payload[i];
+                for(int j = 0; j < 8; j++){
+                    int idx = i * 8 + j;
+                    if(idx < bitfield.size()){
+                        bitfield[idx] = (b & (1 << (7 - j))) != 0;
+                    }
+                }
+            }
+            pieces = bitfield;
+            return; 
+        }
+        else if(msg->type == MessageType::UNCHOKE){
+            chok = false;
+        }
+        else if(msg->type == MessageType::CHOKE){
+            chok = true;
+        }
+        else if(msg->type == MessageType::HAVE){
+            uint32_t idx = ntohl(*reinterpret_cast<uint32_t*>(msg->payload.data()));
+            cout << "Peer has piece " << idx << "\n";
+            if(idx < bitfield.size()){
+                bitfield[idx] = true;
+            }
+            pieces = bitfield;
+        }
     }
-    for(int i=0;i<msg->payload.size();i++){
-        uint8_t b=msg->payload[i];
-        for(int j=0;j<8;j++){
-            int idx=i*8+j;
-            if(idx<bitfield.size()){
-                bitfield[idx]=(b & (1 << (7-j))) != 0;
+    pieces = bitfield;
+}
+
+
+bool PeerConnection::is_unchoked(){
+    if(!interested){
+        PeerMessage msg=PeerMessage::make_interested();
+        if(!send_msg(msg)){
+            return false;
+        }
+        interested=true;
+    }
+    if(!chok) return true;
+    PeerMessage msg=PeerMessage::make_interested();
+    if(!send_msg(msg)){
+        return false;
+    }
+
+    for(int i=0;i<30;i++){
+        auto msg=recv_msg();
+        if(!msg.has_value()){
+            return false;
+        }
+        if(msg->type==MessageType::UNCHOKE){
+            chok=false;
+            return true;
+        }
+        if(msg->type==MessageType::CHOKE){
+            chok=true;
+            return false;
+        }
+    }
+    return false;
+}
+
+bool PeerConnection::download_piece(uint32_t index, int length, vector<uint8_t>& data, string& expected_hash){
+
+    if(!has_piece(index)){
+        cout<<"Peer does not have piece "<<index<<"\n";
+        return false;
+    }
+    if(!is_unchoked()){
+        cout<<"Peer is choked, cannot download piece "<<index<<"\n";
+        return false;
+    }
+
+    data.resize(length);
+
+    int block_size=16384;
+
+    for(int offset=0;offset<length;offset+=block_size){
+        int req_length=min(block_size, length-offset);
+        
+        PeerMessage req=PeerMessage::make_request(index, offset, req_length);
+        if(!send_msg(req)){
+            cout<<"Failed to send request for piece "<<index<<" offset "<<offset<<"\n";
+            return false;
+        }
+
+        bool received_blk=false;
+        while(!received_blk){
+            auto msg=recv_msg();
+            if(!msg) return false;
+            if(msg->type==MessageType::PIECE){
+                uint32_t recv_index=ntohl(*reinterpret_cast<uint32_t*>(msg->payload.data()));  //todo explaination
+                int recv_offset=ntohl(*reinterpret_cast<uint32_t*>(msg->payload.data()+4)); //todo explaination
+                
+                if(recv_index==index && recv_offset==offset){
+                    int recv_length=msg->payload.size()-8;
+                    memcpy(data.data()+offset, msg->payload.data()+8, recv_length);
+                    received_blk=true;
+                }
+            }
+            else if(msg->type==MessageType::CHOKE){
+                chok=true;
+                cout<<"Peer choked us while downloading piece "<<index<<"\n";
+                return false;
             }
         }
     }
+    string str_data(reinterpret_cast<char*>(data.data()), data.size());
+    string hash=sha1_hash(str_data);
+    if(hash!=expected_hash){
+        //todo error 
+        cout<<"Hash mismatch for piece "<<index<<"\n";
+        return false;
+    }
+    return true;
 }
+    
